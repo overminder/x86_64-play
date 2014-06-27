@@ -1,15 +1,17 @@
 #include "execute.h"
 
-#ifdef _WIN64
+#if defined(_WIN32)
 # define _USES_VIRTUALALLOC
-#elif __APPLE__ || __posix
+#elif defined(__APPLE__) || defined(__posix)
 # define _USES_MMAP
+#else
+# error Non-supported platform
 #endif
 
 #ifdef _USES_MMAP
 # include <sys/mman.h>
-#elif _USES_VIRTUALALLOC
-# error WIN not supported
+#elif defined(_USES_VIRTUALALLOC)
+# include <windows.h>
 #endif
 
 #include <stdio.h>
@@ -31,7 +33,8 @@ allocateExecutableMemory(int size) {
   return mmap(NULL, size, PROT_EXEC | PROT_READ | PROT_WRITE,
       MAP_ANON | MAP_PRIVATE, -1, 0);
 #else
-# error No mmap!
+  return VirtualAlloc(NULL, size, MEM_RESERVE | MEM_COMMIT,
+    PAGE_EXECUTE_READWRITE);
 #endif
 }
 
@@ -40,7 +43,7 @@ deallocateMemory(void *addr, int size) {
 #ifdef _USES_MMAP
   munmap(addr, size);
 #else
-# error No mmap!
+  VirtualFree(addr, size, MEM_RELEASE);
 #endif
 }
 
